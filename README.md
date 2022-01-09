@@ -1,7 +1,7 @@
 # HybridController
 allow for controller input and code to affect each other
 written by PhoenixBros
-code stolen from https://stackoverflow.com/questions/46506850/how-can-i-get-input-from-an-xbox-one-controller-in-python \n
+code stolen from https://stackoverflow.com/questions/46506850/how-can-i-get-input-from-an-xbox-one-controller-in-python
             pygame https://www.pygame.org/news
             vgamepad https://pypi.org/project/vgamepad/
 
