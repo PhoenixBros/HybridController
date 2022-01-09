@@ -1,5 +1,5 @@
 # HybridController
-allow for controller input and code to affect each other
+allow for real controller input and code to combine and output to a new virtual controller
 written by PhoenixBros
 code stolen from https://stackoverflow.com/questions/46506850/how-can-i-get-input-from-an-xbox-one-controller-in-python
             pygame https://www.pygame.org/news
