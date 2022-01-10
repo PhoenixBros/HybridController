@@ -38,7 +38,7 @@ class HybridController:
     XBOX_Y = vg.XUSB_BUTTON.XUSB_GAMEPAD_Y
 
     ############################################
-    ############### global variables ###########
+    ############### class variables ############
     # the current condition of the controller and code
     pg = pygame
     con = {"button":{'a':False, 'b':False, 'x':False, 'y':False, 'back':False, 'guide':False, 'start':False, 'left thumb':False, 'right thumb':False, 'left shoulder':False, 'right shoulder':False, 'dpad up':False, 'dpad down':False, 'dpad left':False, 'dpad right':False}, "axis":{'left stick x':0, 'left stick y':0, 'right stick x':0, 'right stick y':0, 'left trigger':0, 'right trigger':0}}
