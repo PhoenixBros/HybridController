@@ -350,7 +350,10 @@ if __name__ == '__main__':
     while coderunning:
         # sets a framerate
         cntr.pg.time.Clock().tick(60)
+        
         # updates the system
+        # very simple update
         cntr.update()
+        # a bigger more thurough update
         cntr.updatefull(joy=cntr.joyce, gamepad=cntr.virtcon, scheme=PS4SCHEME, modes=["xor","max"]) 
         
