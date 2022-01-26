@@ -242,26 +242,24 @@ class HybridController:
         for mkeyy in map['hat y']:
             if mkeyy['type'] == 'button':
                 self.con["button"][mkeyy['key']] = self.cnvrtHatToBtn(joy.get_hat(hit)[hat['hat y']], mkeyy)
-                self.updateButton(mkeyy['key'], self.virtcon, self.activeMode)
             elif mkeyy['type'] == 'axis':
                 self.con["axis"][mkeyy['key']] = self.cnvrtHatToAxs(joy.get_hat(hit)[hat['hat y']], mkeyy)
-                self.updateAxis(mkeyy['key'], self.virtcon, self.activeMode)
         
     # codes set button function
     def setButton(self, button:str, val:bool):
         self.code["button"][button] = val
-        self.buttonSet.append(self.indexFromButtonStr(button))
+        self.buttonSet.append(button)
     def setButton(self, key:int, val:bool):
         self.code["button"][self.strFromButtonIndex(key)] = val
-        self.buttonSet.append(key)
+        self.buttonSet.append(self.strFromButtonIndex(key))
 
     # codes set axis function
     def setAxis(self, name:str, val:float):
         self.code["axis"][name] = self.clampf(val) 
-        self.axisSet.append(self.indexFromAxisStr(name))
+        self.axisSet.append(name)
     def setAxis(self, ind:int, val:float):
         self.code["axis"][self.strFromAxisIndex(ind)] = self.clampf(val)
-        self.axisSet.append(ind)
+        self.axisSet.append(self.strFromAxisIndex(ind))
 
     # sets the output controllers values
     def updateController(self, gamepad: vg.VX360Gamepad, bMode: str, aMode: str):
@@ -289,7 +287,8 @@ class HybridController:
         return key
 
     # updates individule axis
-    def updateAxis(self, key: int, gamepad: vg.VX360Gamepad, aMode: str, scheme: dict[str, int]):
+    def updateAxis(self, key: str, gamepad: vg.VX360Gamepad, aMode: str):
+        key = self.indexFromAxisStr(key)
         if key < 2:
             gamepad.left_joystick_float(self.combineAxis(0, aMode), self.combineAxis(1, aMode))
         elif key < 4:
@@ -353,12 +352,12 @@ class HybridController:
                 print("controller disconnected")
         while len(self.buttonSet) > 0:
             button = self.buttonSet.pop()
-            if button < 15:
-                self.updateButton(button, gamepad, modes[0], scheme["button"])
+            if self.INPUTOPTIONS.__contains__(button):
+                self.updateButton(button, gamepad, modes[0])
         while len(self.axisSet) > 0:
             axis = self.axisSet.pop()
-            if axis < 6:
-                self.updateAxis(axis, gamepad, modes[1], scheme["axis"])
+            if self.INPUTOPTIONS.__contains__(axis) :
+                self.updateAxis(axis, gamepad, modes[1])
         if changed:
             self.updateController(self.virtcon, self.activeMode[0], self.activeMode[1])
             
