@@ -201,9 +201,7 @@ class HybridController:
     
     # individually reads a button
     def readButton(self, button: str, joy: pygame.joystick.Joystick, scheme: dict[str, int], map: dict[str, dict[any]]):
-        print("?", button)
         if map.__contains__(button):
-            print("yep! ",button)
             for mkey in map[button]:
                 if mkey['type'] == 'button':
                     self.con["button"][mkey['key']] = joy.get_button(scheme[button])
@@ -292,7 +290,6 @@ class HybridController:
 
     # updates individule axis
     def updateAxis(self, key: int, gamepad: vg.VX360Gamepad, aMode: str, scheme: dict[str, int]):
-        print("yes?",key)
         if key < 2:
             gamepad.left_joystick_float(self.combineAxis(0, aMode), self.combineAxis(1, aMode))
         elif key < 4:
