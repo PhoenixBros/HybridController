@@ -1,6 +1,10 @@
-# very simple code to display what integer is used for each button and axis
+###################################################################
+# this code is a bit outdated, but still gives valuable information
+###################################################################
+
+
 # mostly stolen from https://stackoverflow.com/questions/46506850/how-can-i-get-input-from-an-xbox-one-controller-in-python
-# modified to create the scheme and output all inputs
+# modified to create the scheme and map them output all inputs
 import pygame
 import time
 pygame.init()
@@ -14,7 +18,12 @@ axisOptions = ['left stick x', 'left stick y', 'right stick x', 'right stick y',
 current = 0
 scheme = {"button":{},"axis":{}}
 once = False
+
+# do you want to create a scheme
 createScheme = True
+
+# automating the mapping prosses is hard. i might try again later
+# createMapping
 
 # for all the connected joysticks
 for i in range(0, pygame.joystick.get_count()):
@@ -24,6 +33,8 @@ for i in range(0, pygame.joystick.get_count()):
     joysticks[-1].init()
     # print a statement telling what the name of the controller is
     print ("Detected joystick ", joysticks[-1].get_name())
+
+
 while keepPlaying:
     clock.tick(60)
     if not once:
@@ -35,7 +46,7 @@ while keepPlaying:
         else:
             createScheme = False
             once = False
-    for event in pygame.event.get((pygame.JOYAXISMOTION, pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP)):
+    for event in pygame.event.get((pygame.JOYAXISMOTION, pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP, pygame.JOYHATMOTION, pygame.JOYBALLMOTION)):
         if createScheme:
             if current < len(buttonOptions):
                 if event.type == pygame.JOYBUTTONDOWN:
@@ -60,8 +71,6 @@ while keepPlaying:
                 pygame.event.clear()
             if event.type == pygame.JOYAXISMOTION:
                 if abs(event.value) > .5:
-                    print(event.value)
-            elif event.type == pygame.JOYBUTTONDOWN | event.type == pygame.JOYBUTTONUP:
-                print(event.button)
+                    print(event)
             else:
                 print(event)
