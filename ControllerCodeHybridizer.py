@@ -1,25 +1,104 @@
 # written by PhoenixBros
-# written in python 3.10.1 sorry if it breaks for you
+# written in python 3.10.1 
 # becuase this system creates a virtual controller and uses your existing controller as input you may have to restart games or change which controller they use in settings 
-# i tested this code using a ps4 controller. your controller may provide different numbers for its inputs. add a controlScheme to reprisent your controller and switch to it
+# i tested this code using a ps4 controller and a moga. your controller may provide different numbers for its inputs. add a controlScheme to reprisent your controller and switch to it
 
-# TODO this code does not support hats
-# TODO this code does not support converting axis input to button and button to axis
-
+from operator import index
+from turtle import update
 import pygame
 import vgamepad as vg
 import random
 
 ############## control schemes ##############
-# the scheme maps the controllers values to the corrisponding xbox input
-# a number must exist for each input found in inputOptions. dont double up becuase the key and values will be reversed
-# this can also be used to create "wrong" schemes that can do fun stuff like flip your x and y axis or remap the controller
-# example of a scheme for a ps4 controller (objectivly best controller acording to me)
-PS4SCHEME = {'button':{'a':0, 'b':1, 'x':2, 'y':3, 'back':4, 'guide':5, 'start':6, 'left thumb':7, 'right thumb':8, 'left shoulder':9, 'right shoulder':10, 'dpad up':11, 'dpad down':12, 'dpad left':13, 'dpad right':14, 'track pad':15}, 'axis':{'left stick x':0, 'left stick y':1, 'right stick x':2, 'right stick y':3, 'left trigger':4, 'right trigger':5}}
-# example of a warped scheme that makes: a->y, b->x, x->b, y->a and lstick x->lstick y, rstick x->rstick y
-PS4FLIPED = {'button':{'a':3, 'b':2, 'x':1, 'y':0, 'back':4, 'guide':5, 'start':6, 'left thumb':7, 'right thumb':8, 'left shoulder':9, 'right shoulder':10, 'dpad up':12, 'dpad down':11, 'dpad left':14, 'dpad right':13, 'track pad':15}, 'axis':{'left stick x':1, 'left stick y':0, 'right stick x':3, 'right stick y':2, 'left trigger':4, 'right trigger':5}}
+# the scheme records what the key is for each button, axis, or hat that your controller uses. make sure these are accurate to your controller
+# the map determines what these buttons and axis influence. these do not need to map accurately and can be used to create unusual behavior.
+# example of a scheme for a ps4 controller (objectivly best controller)
+PS4SCHEME = {'button':{'x':0, 'circle':1, 'square':2, 'triangle':3, 'share':4, 'guide':5, 'options':6, 'left thumb':7, 'right thumb':8, 'left shoulder':9, 'right shoulder':10, 'dpad up':11, 'dpad down':12, 'dpad left':13, 'dpad right':14, 'track pad':15}, 
+            "axis":{'left stick x':0, 'left stick y':1, 'right stick x':2, 'right stick y':3, 'left trigger':4, 'right trigger':5}}
+PS4DEFAULTMAP = {   'x':[{'key':'a','type':'button'}], 
+                    'circle':[{'key':'b','type':'button'}], 
+                    'square':[{'key':'x','type':'button'}],
+                    'triangle':[{'key':'y','type':'button'}],
+                    'share':[{'key':'back','type':'button'}],
+                    'guide':[{'key':'guide','type':'button'}],
+                    'options':[{'key':'start','type':'button'}],
+                    'left thumb':[{'key':'left thumb','type':'button'}],
+                    'right thumb':[{'key':'right thumb','type':'button'}],
+                    'left shoulder':[{'key':'left shoulder','type':'button'}],
+                    'right shoulder':[{'key':'right shoulder','type':'button'}],
+                    'dpad up':[{'key':'dpad up','type':'button'}],
+                    'dpad down':[{'key':'dpad down','type':'button'}],
+                    'dpad left':[{'key':'dpad left','type':'button'}],
+                    'dpad right':[{'key':'dpad right','type':'button'}],
+                    'track pad':[{'key':'start','type':'button'}],
+                    'left stick x':[{'key':'left stick x','type':'axis', 'flip':False}],
+                    'left stick y':[{'key':'left stick y','type':'axis', 'flip':True}],
+                    'right stick x':[{'key':'right stick x','type':'axis', 'flip':False}],
+                    'right stick y':[{'key':'right stick y','type':'axis', 'flip':True}],
+                    'left trigger':[{'key':'left trigger','type':'axis', 'squash':True}],
+                    'right trigger':[{'key':'right trigger','type':'axis', 'squash':True}]}
+# example of the MOGA controler
+MOGASCHEME = {"button":{'a':0, 'b':1, 'x':2, 'y':3, 'back':6, 'start':7, 'left thumb':8, 'right thumb':9, 'left shoulder':4, 'right shoulder':5},
+             "axis":{'left stick x':0, 'left stick y':1, 'right stick x':2, 'right stick y':3, 'left trigger':4, 'right trigger':5}, 
+             "hat":{'hat':0, 'hat x':0, 'hat y':1}}
+MOGADEFAULTMAP = {  'a':[{'key':'a','type':'button'}], 
+                    'b':[{'key':'b','type':'button'}], 
+                    'x':[{'key':'x','type':'button'}],
+                    'y':[{'key':'y','type':'button'}],
+                    'back':[{'key':'back','type':'button'}],
+                    'start':[{'key':'start','type':'button'}],
+                    'left thumb':[{'key':'left thumb','type':'button'}],
+                    'right thumb':[{'key':'right thumb','type':'button'}],
+                    'left shoulder':[{'key':'left shoulder','type':'button'}],
+                    'right shoulder':[{'key':'right shoulder','type':'button'}],
+                    'hat y':[{'key':'dpad up','type':'button', 'val':1},
+                            {'key':'dpad down','type':'button', 'val':-1}],
+                    'hat x':[{'key':'dpad left','type':'button', 'val':-1},
+                            {'key':'dpad right','type':'button', 'val':1}],
+                    'left stick x':[{'key':'left stick x','type':'axis', 'flip':False}],
+                    'left stick y':[{'key':'left stick y','type':'axis', 'flip':False}],
+                    'right stick x':[{'key':'right stick x','type':'axis', 'flip':False}],
+                    'right stick y':[{'key':'right stick y','type':'axis', 'flip':False}],
+                    'left trigger':[{'key':'left trigger','type':'axis', 'flip':False}],
+                    'right trigger':[{'key':'right trigger','type':'axis', 'flip':False}]}
+
+# example of an unusual map
+# [{'(input name)':{'key':'(output name), 'type':'(input type)', 'val':'(threshold or output)', 'flip':(true/false), 'squash':(true/false)}]
+# (input name) is the name of the input used by your controller.
+# (output name) is the name of the input on the xbox controller.
+# (input type) is what kind of input this output is
+# (threshold or output) is the threshold of converting a float to a bool. or its the float value that it will output
+# (flip) allows for inversion of up and down
+# (squash) is if the input should be forced 0 to 1 from -1 to 1
+# only add 1 instance of each input. if you need multiple, simply add a another dict portion 
+# this map swaps the dpad with the left joystick
+PS4DEMOMAP = {  'x':[{'key':'a', 'type':'button'}], 
+                'circle':[{'key':'b', 'type':'button'}], 
+                'square':[{'key':'x', 'type':'button'}],
+                'triangle':[{'key':'y', 'type':'button'}],
+                'share':[{'key':'back', 'type':'button'}],
+                'guide':[{'key':'guide', 'type':'button'}],
+                'options':[{'key':'start', 'type':'button'}],
+                'left thumb':[{'key':'left thumb', 'type':'button'}],
+                'right thumb':[{'key':'right thumb', 'type':'button'}],
+                'left shoulder':[{'key':'left shoulder', 'type':'button'}],
+                'right shoulder':[{'key':'right shoulder', 'type':'button'}],
+                'track pad':[{'key':'start','type':'button'}],
+                'dpad up':[{'key':'left stick y', 'type':'axis', 'val':1.0}],
+                'dpad down':[{'key':'left stick y', 'type':'axis', 'val':-1.0}],
+                'dpad left':[{'key':'left stick x', 'type':'axis', 'val':-1.0}],
+                'dpad right':[{'key':'left stick x', 'type':'axis', 'val':1.0}],
+                'left stick x':[{'key':'dpad left', 'type':'button', 'val':-.5, 'flip':False},
+                                {'key':'dpad right', 'type':'button', 'val':.5, 'flip':False}],
+                'left stick y':[{'key':'dpad up', 'type':'button', 'val':-.5, 'flip':False},
+                                {'key':'dpad down', 'type':'button', 'val':.5, 'flip':False}],
+                'right stick x':[{'key':'right stick x', 'type':'axis', 'flip':False}],
+                'right stick y':[{'key':'right stick y', 'type':'axis', 'flip':True}],
+                'left trigger':[{'key':'left trigger', 'type':'axis', 'squash':True}],
+                'right trigger':[{'key':'right trigger', 'type':'axis', 'squash':True}]}
 
 class HybridController:
+    ################ constants ###############
     # XBOX BUTTONS
     XBOX_DPAD_UP = vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_UP
     XBOX_DPAD_DOWN = vg.XUSB_BUTTON.XUSB_GAMEPAD_DPAD_DOWN
@@ -36,24 +115,28 @@ class HybridController:
     XBOX_B = vg.XUSB_BUTTON.XUSB_GAMEPAD_B
     XBOX_X = vg.XUSB_BUTTON.XUSB_GAMEPAD_X
     XBOX_Y = vg.XUSB_BUTTON.XUSB_GAMEPAD_Y
+    
+    INPUTOPTIONS = ['a', 'b', 'x', 'y', 'back', 'guide', 'start', 'left thumb', 'right thumb', 'left shoulder', 'right shoulder', 'dpad up', 'dpad down', 'dpad left', 'dpad right', 'left stick x', 'left stick y', 'right stick x', 'right stick y', 'left trigger', 'right trigger']
 
     ############################################
-    ############### class variables ############
-    # the current condition of the controller and code
+    ############### class variables ###########
     pg = pygame
-    con = {"button":{'a':False, 'b':False, 'x':False, 'y':False, 'back':False, 'guide':False, 'start':False, 'left thumb':False, 'right thumb':False, 'left shoulder':False, 'right shoulder':False, 'dpad up':False, 'dpad down':False, 'dpad left':False, 'dpad right':False}, "axis":{'left stick x':0, 'left stick y':0, 'right stick x':0, 'right stick y':0, 'left trigger':0, 'right trigger':0}}
+
+    # the current condition of the controller and code
+    con = {"button":{'a':False, 'b':False, 'x':False, 'y':False, 'back':False, 'guide':False, 'start':False, 'left thumb':False, 'right thumb':False, 'left shoulder':False, 'right shoulder':False, 'dpad up':False, 'dpad down':False, 'dpad left':False, 'dpad right':False}, "axis":{'left stick x':0, 'left stick y':0, 'right stick x ':0, 'right stick y':0, 'left trigger':0, 'right trigger':0}}
     code = {"button":{'a':False, 'b':False, 'x':False, 'y':False, 'back':False, 'guide':False, 'start':False, 'left thumb':False, 'right thumb':False, 'left shoulder':False, 'right shoulder':False, 'dpad up':False, 'dpad down':False, 'dpad left':False, 'dpad right':False}, "axis":{'left stick x':0, 'left stick y':0, 'right stick x':0, 'right stick y':0, 'left trigger':0, 'right trigger':0}}
-    inputOptions = ['a', 'b', 'x', 'y', 'back', 'guide', 'start', 'left thumb', 'right thumb', 'left shoulder', 'right shoulder', 'dpad up', 'dpad down', 'dpad left', 'dpad right', 'left stick x', 'left stick y', 'right stick x', 'right stick y', 'left trigger','right trigger']
+
+    # defualt perameters
+    activeMap = {}
     activeScheme = {}
-    revScheme = {}
     buttonSet = []
     axisSet = []
     activeMode = []
-    joyce = pg.joystick.Joystick
+    joyce = pygame.joystick.Joystick
     virtcon = vg.VX360Gamepad
 
     # initilize the controller settup
-    def __init__(self, scheme:dict[str, any]):
+    def __init__(self, scheme:dict[str, any], map:dict[str, any]):
         self.pg.init()
         # only continues if a controller is conected
         if (self.pg.joystick.get_count() < 1): 
@@ -62,55 +145,112 @@ class HybridController:
             self.joyce = self.connectController()
             self.virtcon = self.createVirtualController()
             self.activeScheme = scheme
-            self.revScheme = self.reverseScheme(self.activeScheme)
-            self.readController(self.joyce, self.activeScheme) 
+            self.activeMap = map
             self.activeMode = ['joy','joy']
+            self.readController(self.joyce, self.activeScheme, self.activeMap) 
 
     #############################################
     ################# functions #################
     # reads the currenct condition of the controller and saves it to variables
-    def readController(self, joy: pygame.joystick.Joystick, scheme: dict[str, dict[str, int]]):
-        button = scheme['button']
-        axis = scheme['axis']
-        self.con = {"button":{
-                        'a':bool(joy.get_button(button['a'])), 
-                        'b':bool(joy.get_button(button['b'])), 
-                        'x':bool(joy.get_button(button['x'])), 
-                        'y':bool(joy.get_button(button['y'])), 
-                        'back':bool(joy.get_button(button['back'])), 
-                        'guide':bool(joy.get_button(button['guide'])), 
-                        'start':bool(joy.get_button(button['start'])), 
-                        'left thumb':bool(joy.get_button(button['left thumb'])), 
-                        'right thumb':bool(joy.get_button(button['right thumb'])), 
-                        'left shoulder':bool(joy.get_button(button['left shoulder'])), 
-                        'right shoulder':bool(joy.get_button(button['right shoulder'])), 
-                        'dpad up':bool(joy.get_button(button['dpad up'])), 
-                        'dpad down':bool(joy.get_button(button['dpad down'])), 
-                        'dpad left':bool(joy.get_button(button['dpad left'])), 
-                        'dpad right':bool(joy.get_button(button['dpad right']))},
-                    "axis":{
-                        'left stick x':self.clampf(joy.get_axis(axis['left stick x'])),
-                        'left stick y':self.clampf(-joy.get_axis(axis['left stick y'])), 
-                        'right stick x':self.clampf(joy.get_axis(axis['right stick x'])),
-                        'right stick y':self.clampf(-joy.get_axis(axis['right stick x'])), 
-                        'left trigger':self.triggerSquash(joy.get_axis(axis['left trigger'])), 
-                        'right trigger':self.triggerSquash(joy.get_axis(axis['right trigger']))}}
+    def readController(self, joy: pygame.joystick.Joystick, scheme: dict[str, dict[str, int]], map: dict[str, any]):
+        # reads the buttons
+        if scheme.__contains__("button"):
+            for key in scheme["button"].keys():
+                for mkey in map[key]:
+                    if mkey['type'] == 'button':
+                        self.con["button"][mkey['key']] = joy.get_button(scheme["button"][key])
+                    elif mkey["type"] == 'axis':
+                        self.con["axis"][mkey['key']] = self.cnvrtBtnToAxs(joy.get_button(scheme["button"][key]), mkey)
+        
+        # reads the axis
+        if scheme.__contains__("axis"):
+            for key in scheme["axis"].keys():
+                for mkey in map[key]:
+                    # the joy value
+                    val = joy.get_axis(scheme["axis"][key])
+                    
+                    # can invert the value
+                    if mkey.__contains__('flip'):
+                        if mkey['flip']:
+                            val = -1.0*val
+                    
+                    # can squash the value from [-1,1] to [0,1]
+                    if mkey.__contains__('squash'):
+                        if mkey['squash']:
+                            val = self.triggerSquash(val)
 
+                    # turns it into an axis or button output
+                    if mkey['type'] == 'axis': 
+                        self.con["axis"][mkey['key']] = val
+                    elif mkey['type'] == 'button':
+                        self.con["button"][mkey['key']] = self.cnvrtAxsToBtn(val, mkey)
+        
+        # reads hats
+        if scheme.__contains__("hat"):
+            hat = scheme["hat"]
+            for mkeyx in map['hat x']:
+                if mkeyx['type'] == 'button':
+                    self.con["button"][mkeyx['key']] = self.cnvrtHatToBtn(joy.get_hat(hat['hat'])[hat['hat x']], mkeyx)
+                elif mkeyx['type'] == 'axis':
+                    self.con["axis"][mkeyx['key']] = self.cnvrtHatToAxs(joy.get_hat(hat['hat'])[hat['hat x']], mkeyx)
+ 
+            for mkeyy in map['hat y']:
+                if mkeyy['type'] == 'button':
+                    self.con["button"][mkeyy['key']] = self.cnvrtHatToBtn(joy.get_hat(hat['hat'])[hat['hat y']], mkeyy)
+                elif mkeyy['type'] == 'axis':
+                    self.con["axis"][mkeyy['key']] = self.cnvrtHatToAxs(joy.get_hat(hat['hat'])[hat['hat y']], mkeyy)
+        self.updateController(self.virtcon, self.activeMode[0], self.activeMode[1])
+    
     # individually reads a button
-    def readButton(self, button: str, joy: pygame.joystick.Joystick, scheme: dict[str, int]):
-        self.con["button"][button] = bool(joy.get_button(scheme[button]))
+    def readButton(self, button: str, joy: pygame.joystick.Joystick, scheme: dict[str, int], map: dict[str, dict[any]]):
+        print("?", button)
+        if map.__contains__(button):
+            print("yep! ",button)
+            for mkey in map[button]:
+                if mkey['type'] == 'button':
+                    self.con["button"][mkey['key']] = joy.get_button(scheme[button])
+                elif mkey["type"] == 'axis':
+                    self.con["axis"][mkey['key']] = self.cnvrtBtnToAxs(joy.get_button(scheme[button]), mkey)
 
     # individually reads an axis
-    def readAxis(self, axis: str, joy: pygame.joystick.Joystick, scheme: dict[str, int]):
-        if axis in self.inputOptions[15:]:
-            if len(axis.split(' ')) == 3:
-                if axis.split(' ')[2] == 'x':
-                    self.con["axis"][axis] = self.clampf(joy.get_axis(scheme[axis]))
-                else:
-                    self.con["axis"][axis] = self.clampf(-joy.get_axis(scheme[axis]))
-            else:
-                self.con["axis"][axis] = self.triggerSquash(joy.get_axis(scheme[axis]))
+    def readAxis(self, axis: str, joy: pygame.joystick.Joystick, scheme: dict[str, int], map: dict[str, dict[any]]):
+        for mkey in map[axis]:
+            # the joy value
+            val = joy.get_axis(scheme[axis])
+            
+            # can invert the value
+            if mkey.__contains__('flip'):
+                if mkey['flip']:
+                    val = -1.0*val
+            
+            # can squash the value from [-1,1] to [0,1]
+            if mkey.__contains__('squash'):
+                if mkey['squash']:
+                    val = self.triggerSquash(val)
 
+            # turns it into an axis or button output
+            if mkey['type'] == 'axis':
+                self.con["axis"][mkey['key']] = val
+            elif mkey['type'] == 'button':
+                self.con["button"][mkey['key']] = self.cnvrtAxsToBtn(val, mkey)
+
+    # reads the value of a hat
+    def readHat(self, hit: int, joy: pygame.joystick.Joystick, scheme: dict[str, int], map: dict[str, dict[any]]):
+        hat = scheme["hat"]
+        for mkeyx in map['hat x']:
+            if mkeyx['type'] == 'button':
+                self.con["button"][mkeyx['key']] = self.cnvrtHatToBtn(joy.get_hat(hit)[hat['hat x']], mkeyx)
+            elif mkeyx['type'] == 'axis':
+                self.con["axis"][mkeyx['key']] = self.cnvrtHatToAxs(joy.get_hat(hit)[hat['hat x']], mkeyx)
+        
+        for mkeyy in map['hat y']:
+            if mkeyy['type'] == 'button':
+                self.con["button"][mkeyy['key']] = self.cnvrtHatToBtn(joy.get_hat(hit)[hat['hat y']], mkeyy)
+                self.updateButton(mkeyy['key'], self.virtcon, self.activeMode)
+            elif mkeyy['type'] == 'axis':
+                self.con["axis"][mkeyy['key']] = self.cnvrtHatToAxs(joy.get_hat(hit)[hat['hat y']], mkeyy)
+                self.updateAxis(mkeyy['key'], self.virtcon, self.activeMode)
+        
     # codes set button function
     def setButton(self, button:str, val:bool):
         self.code["button"][button] = val
@@ -128,23 +268,22 @@ class HybridController:
         self.axisSet.append(ind)
 
     # sets the output controllers values
-    def updateController(self, gamepad: vg.VX360Gamepad, bMode: str, aMode: str, scheme: dict[str, dict[str, int]]):
+    def updateController(self, gamepad: vg.VX360Gamepad, bMode: str, aMode: str):
         for i in range(15):
-            butt = scheme["button"][self.strFromButtonIndex(i)]
-            activation = self.combineButton(butt, bMode)
+            activation = self.combineButton(i, bMode)
             if activation:
-                gamepad.press_button(self.hexButtonIndex(butt))
+                gamepad.press_button(self.hexButtonIndex(i))
             else:
-                gamepad.release_button(self.hexButtonIndex(butt))
-        gamepad.left_joystick_float(self.combineAxis(scheme["axis"]['left stick x'], aMode), self.combineAxis(scheme["axis"]['left stick y'], aMode))
-        gamepad.right_joystick_float(self.combineAxis(scheme["axis"]['right stick x'], aMode), self.combineAxis(scheme["axis"]['right stick y'], aMode))
-        gamepad.left_trigger_float(self.combineAxis(scheme["axis"]['left trigger'], aMode))
-        gamepad.right_trigger_float(self.combineAxis(scheme["axis"]['right trigger'], aMode))
+                gamepad.release_button(self.hexButtonIndex(i))
+        gamepad.left_joystick_float(self.combineAxis(0, aMode), self.combineAxis(1, aMode))
+        gamepad.right_joystick_float(self.combineAxis(2, aMode), self.combineAxis(3, aMode))
+        gamepad.left_trigger_float(self.combineAxis(4, aMode))
+        gamepad.right_trigger_float(self.combineAxis(5, aMode))
         gamepad.update()
 
     # updates individual buttons
-    def updateButton(self, key: int, gamepad: vg.VX360Gamepad, bMode: str, scheme:dict[str, int] ):
-        key = scheme[self.strFromButtonIndex(key)]
+    def updateButton(self, key: str, gamepad: vg.VX360Gamepad, bMode: str):
+        key = self.indexFromButtonStr(key)
         activation = self.combineButton(key, bMode)
         if activation:
             gamepad.press_button(self.hexButtonIndex(key))
@@ -155,14 +294,15 @@ class HybridController:
 
     # updates individule axis
     def updateAxis(self, key: int, gamepad: vg.VX360Gamepad, aMode: str, scheme: dict[str, int]):
+        print("yes?",key)
         if key < 2:
-            gamepad.left_joystick_float(self.combineAxis(scheme['left stick x'], aMode), self.combineAxis(scheme['left stick y'], aMode))
+            gamepad.left_joystick_float(self.combineAxis(0, aMode), self.combineAxis(1, aMode))
         elif key < 4:
-            gamepad.right_joystick_float(self.combineAxis(scheme['right stick x'], aMode), self.combineAxis(scheme['right stick y'], aMode))
+            gamepad.right_joystick_float(self.combineAxis(2, aMode), self.combineAxis(3, aMode))
         elif key < 5:
-            gamepad.left_trigger_float(self.combineAxis(scheme['left trigger'], aMode))
+            gamepad.left_trigger_float(self.combineAxis(4, aMode))
         elif key < 6:
-            gamepad.right_trigger_float(self.combineAxis(scheme['right trigger'], aMode))
+            gamepad.right_trigger_float(self.combineAxis(5, aMode))
         gamepad.update()
         return key
 
@@ -196,18 +336,25 @@ class HybridController:
         return gamepad
 
     # The main update function
-    def updatefull(self, joy:pygame.joystick.Joystick, gamepad:vg.VX360Gamepad, scheme:dict[str, dict[str, int]], modes:list[str]):
-        for event in self.pg.event.get((pygame.JOYAXISMOTION, pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP, pygame.JOYDEVICEREMOVED)):
+    def updatefull(self, joy:pygame.joystick.Joystick, gamepad:vg.VX360Gamepad, scheme:dict[str, dict[str, int]], map:dict[str, any], modes:list[str]):
+        self.virtcon = gamepad
+        self.activeMode = modes
+        changed = False
+        # cycle through the events and perform action if need be
+        for event in self.pg.event.get((pygame.JOYAXISMOTION, pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP, pygame.JOYHATMOTION, pygame.JOYDEVICEREMOVED)):
             if (event.type == pygame.JOYBUTTONDOWN) | (event.type == pygame.JOYBUTTONUP):
-                if event.button < 15:
-                    button = event.button
-                    self.readButton(self.revScheme["button"][button], joy, scheme["button"])
-                    self.updateButton(button, gamepad, modes[0], scheme["button"])
+                button = self.buttonName(event.button, scheme)
+                self.readButton(button, joy, scheme["button"], map)
+                changed = True
             elif event.type == pygame.JOYAXISMOTION:
-                axis = event.axis
-                self.readAxis(self.revScheme["axis"][axis], joy, scheme["axis"])
-                self.updateAxis(axis, gamepad, modes[1], scheme["axis"])
-            elif event.type == self.pg.JOYDEVICEREMOVED :
+                axis = self.axisName(event.axis, scheme)
+                self.readAxis(axis, joy, scheme["axis"], map)
+                changed = True
+            elif event.type == pygame.JOYHATMOTION:
+                hat = event.hat
+                self.readHat(hat, joy, scheme, map)
+                changed = True
+            elif event.type == pygame.JOYDEVICEREMOVED :
                 print("controller disconnected")
         while len(self.buttonSet) > 0:
             button = self.buttonSet.pop()
@@ -217,10 +364,13 @@ class HybridController:
             axis = self.axisSet.pop()
             if axis < 6:
                 self.updateAxis(axis, gamepad, modes[1], scheme["axis"])
-    def updatepart(self, scheme:dict[str, dict[str, int]], modes:list[str]):
-        self.updatefull(self.joyce, self.virtcon, scheme, modes)
+        if changed:
+            self.updateController(self.virtcon, self.activeMode[0], self.activeMode[1])
+            
+    def updatepart(self, scheme:dict[str, dict[str, int]], map:dict[str, any], modes:list[str]):
+        self.updatefull(self.joyce, self.virtcon, scheme, map, modes)
     def update(self):
-        self.updatefull(joy=self.joyce, gamepad=self.virtcon, scheme=self.activeScheme, modes=self.activeMode)
+        self.updatefull(joy=self.joyce, gamepad=self.virtcon, scheme=self.activeScheme, map=self.activeMap, modes=self.activeMode)
 
     # print the current controller values
     def printController(self, control:dict[str, any]):
@@ -228,9 +378,13 @@ class HybridController:
             for j in control[i]:
                 print(i + ":" + str(j) + " = " + str(control[i][j]))
 
-    # changes the active scheme, usful for activly remaping the controller
-    def setscheme(self, newscheme:dict[str, dict[str, bool]]):
+    # changes the active scheme
+    def setScheme(self, newscheme:dict[str, dict[str, bool]]):
         self.activeScheme = newscheme
+
+    # changes the active scheme, usful for activly remaping the controller
+    def setMap(self, newmap:dict[str, any]):
+        self.activeMap = newmap
 
     # changes the active mode
     def setModes(self, newmode:list[str]):
@@ -244,10 +398,55 @@ class HybridController:
     def setVirtualControler(self, newVirt:vg.VX360Gamepad):
         self.virtcon = newVirt
 
+
+
     ################### helpers ######################
+    # converts button input to axis input
+    def cnvrtBtnToAxs(self, val:bool, keymap:dict):
+        s = self.con["axis"][keymap['key']]
+        v = keymap['val']
+        if val:
+            v = self.clampf(v + s)
+        else:
+            if self.sign(s) == self.sign(v):
+                v = 0.0
+            else:
+                v = s
+        return v
+
+    # convert axis input to button
+    def cnvrtAxsToBtn(self, val:float, keymap:dict):
+        if self.sign(keymap['val']) == 1:
+            return val > keymap['val']
+        else:
+            return val < keymap['val']
+
+    # convert hat to button
+    def cnvrtHatToBtn(self, val:int, keymap:dict):
+        return val == keymap['val']
+
+    # convert hat to axis
+    def cnvrtHatToAxs(self, val:float, keymap:dict):
+        val = 0
+        if self.sign(keymap['val']) == 1.0:
+            val = max(0.0, val)
+        elif self.sign(keymap['val']) == -1.0:
+            val = min(0.0, val)
+        return val
+
+    # return 1 or -1 if pos or neg, unless n = zero then returns 0
+    def sign(self, n:float):
+        try:
+            return n/abs(n) 
+        except ZeroDivisionError:return 0
+    
     # locks value to between -1 and 1
     def clampf(self, n: float):
         return max(min(1, n), -1)
+    
+    # locks up or down. vert should be -1 or 1
+    def upOrDown(n: float, vert: int):
+        return max(min(1, vert*n), 0)
 
     # squashes the -1 to 1 into 0 to 1
     def triggerSquash(self, n:float):
@@ -264,11 +463,11 @@ class HybridController:
     # returns the button string name by index
     def strFromButtonIndex(self, ind: int):
         if ind in range(15):
-            return self.inputOptions[ind]
+            return self.INPUTOPTIONS[ind]
         else:
             return 'null'
     def indexFromButtonStr(self, st: str):
-        return self.inputOptions.index(st)
+        return self.INPUTOPTIONS.index(st)
 
     # returns axis name by index
     def strFromAxisIndex(self, ind: int):
@@ -281,14 +480,19 @@ class HybridController:
         axis = ['left stick x', 'left stick y', 'right stick x', 'right stick y', 'left trigger', 'right trigger']
         return axis.index(st)
     
-    # reverses the value and keys in scheme
-    def reverseScheme(self, scheme):
-        rev = {}
-        for j in scheme:
-            rev[j] = {}
-            for i in scheme[j]:
-                rev[j][scheme[j][i]] = i
-        return rev
+    # returns the name of the button in the scheme
+    def buttonName(self, ind: int, scheme:dict[str, dict[str, int]]):
+        for i in scheme["button"].keys():
+            if (scheme["button"][i] == ind):
+                return i
+        return "null"
+
+    # returnd the name of the axis
+    def axisName(self, ind: int, scheme:dict[str, dict[str, int]]):
+        for i in scheme["axis"].keys():
+            if (scheme["axis"][i] == ind):
+                return i
+        return "null"
 
     # sets the controllers saved status to defualt
     def resetCon(self):
@@ -303,57 +507,56 @@ class HybridController:
     # adding more modes of combination can do some fun stuff
     # returns a value based on both inputs and the combination method
     def combineButton(self, key: int, mode: str) -> bool:
-        cod = self.code['button'][self.strFromButtonIndex(key)]
+        code = self.code['button'][self.strFromButtonIndex(key)]
         joy = self.con['button'][self.strFromButtonIndex(key)]
         if mode == 'or':
-            return cod | joy
+            return code | joy
         elif mode == 'xor':
-            return (~cod & joy) | (cod & ~joy)
+            return (~code & joy) | (code & ~joy)
         elif mode == 'and':
-            return cod & joy
+            return code & joy
         elif mode == 'rand':
             r = random.randint(0,1) == 1
-            return (cod & r) | (joy & ~r)
+            return (code & r) | (joy & ~r)
         elif mode == 'joy':
             return joy
         elif mode == 'code':
-            return cod
+            return code
 
     # returns a float based on both inputs and the combination method
     def combineAxis(self, key: int, mode: str) -> float:
-        cod = self.code['axis'][self.strFromAxisIndex(key)]
+        code = self.code['axis'][self.strFromAxisIndex(key)]
         joy = self.con['axis'][self.strFromAxisIndex(key)]
         if mode == 'max':
-            if abs(cod) > abs(joy):
-                return cod
+            if abs(code) > abs(joy):
+                return code
             else: 
                 return joy
         elif mode == 'min':
-            if abs(cod) > abs(joy):
+            if abs(code) > abs(joy):
                 return joy
             else: 
-                return cod
+                return code
         elif mode == 'joy':
             return joy
         elif mode == 'code':
-            return cod
+            return code
         elif mode == "avg":
-            return (cod + joy) / 2
+            return (code + joy) / 2
 
 ##################################################
 ##################### main #######################
+cmap = [PS4SCHEME, PS4DEMOMAP]
+
 if __name__ == '__main__':
-    cntr = HybridController(PS4SCHEME) 
+    cntr = HybridController(cmap[0], cmap[1]) 
     cntr.setModes(["xor","max"])
     # this is a simple loop, and can be replaced by calling update() if this code is called from another file
     coderunning = True
     while coderunning:
         # sets a framerate
         cntr.pg.time.Clock().tick(60)
-        
         # updates the system
-        # very simple update
+        #cntr.updatefull(joy=cntr.joyce, gamepad=cntr.virtcon, scheme=PS4SCHEME, map=PS4DEFAULTMAP, modes=["joy","joy"]) 
         cntr.update()
-        # a bigger more thurough update
-        cntr.updatefull(joy=cntr.joyce, gamepad=cntr.virtcon, scheme=PS4SCHEME, modes=["xor","max"]) 
         
