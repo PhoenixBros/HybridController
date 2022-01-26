@@ -3,8 +3,6 @@
 # becuase this system creates a virtual controller and uses your existing controller as input you may have to restart games or change which controller they use in settings 
 # i tested this code using a ps4 controller and a moga. your controller may provide different numbers for its inputs. add a controlScheme to reprisent your controller and switch to it
 
-from operator import index
-from turtle import update
 import pygame
 import vgamepad as vg
 import random
