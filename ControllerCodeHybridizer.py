@@ -3,6 +3,7 @@
 # becuase this system creates a virtual controller and uses your existing controller as input you may have to restart games or change which controller they use in settings 
 # i tested this code using a ps4 controller and a moga. your controller may provide different numbers for its inputs. add a controlScheme to reprisent your controller and switch to it
 
+from time import sleep, time
 import pygame
 import vgamepad as vg
 import random
@@ -125,27 +126,32 @@ class HybridController:
     code = {"button":{'a':False, 'b':False, 'x':False, 'y':False, 'back':False, 'guide':False, 'start':False, 'left thumb':False, 'right thumb':False, 'left shoulder':False, 'right shoulder':False, 'dpad up':False, 'dpad down':False, 'dpad left':False, 'dpad right':False}, "axis":{'left stick x':0, 'left stick y':0, 'right stick x':0, 'right stick y':0, 'left trigger':0, 'right trigger':0}}
 
     # defualt perameters
+    virtActive = False
+    joyceActive = -1
     activeMap = {}
     activeScheme = {}
     buttonSet = []
     axisSet = []
     activeMode = []
-    joyce = pygame.joystick.Joystick
     virtcon = vg.VX360Gamepad
-
+    joyce = pg.joystick.Joystick
     # initilize the controller settup
     def __init__(self, scheme:dict[str, any], map:dict[str, any]):
+        global virtcon, joyce
         self.pg.init()
         # only continues if a controller is conected
         if (self.pg.joystick.get_count() < 1): 
             print("no controller connected.")
+            self.virtActive = False
+            self.joyceActive = -1
         else:
             self.joyce = self.connectController()
             self.virtcon = self.createVirtualController()
             self.activeScheme = scheme
             self.activeMap = map
             self.activeMode = ['joy','joy']
-            self.readController(self.joyce, self.activeScheme, self.activeMap) 
+            if self.joyceActive != -1:
+                self.readController(self.joyce, self.activeScheme, self.activeMap) 
 
     #############################################
     ################# functions #################
@@ -246,18 +252,18 @@ class HybridController:
                 self.con["axis"][mkeyy['key']] = self.cnvrtHatToAxs(joy.get_hat(hit)[hat['hat y']], mkeyy)
         
     # codes set button function
-    def setButton(self, button:str, val:bool):
+    def setButtonStr(self, button:str, val:bool):
         self.code["button"][button] = val
         self.buttonSet.append(button)
-    def setButton(self, key:int, val:bool):
+    def setButtonInt(self, key:int, val:bool):
         self.code["button"][self.strFromButtonIndex(key)] = val
         self.buttonSet.append(self.strFromButtonIndex(key))
 
     # codes set axis function
-    def setAxis(self, name:str, val:float):
+    def setAxisStr(self, name:str, val:float):
         self.code["axis"][name] = self.clampf(val) 
         self.axisSet.append(name)
-    def setAxis(self, ind:int, val:float):
+    def setAxisInt(self, ind:int, val:float):
         self.code["axis"][self.strFromAxisIndex(ind)] = self.clampf(val)
         self.axisSet.append(self.strFromAxisIndex(ind))
 
@@ -314,11 +320,35 @@ class HybridController:
 
     # connects to the active controller
     def connectController(self):
-        joy = self.pg.joystick.Joystick(0)
-        joy.init()
-        print("controller conected!", joy.get_name())
-        return joy
+        self.pg.joystick.init()
+        if self.pg.joystick.get_count()>0:
+            joy = self.pg.joystick.Joystick(0)
+            joy.init()
+            print("controller conected!", joy.get_name())
+            self.joyce = joy
+            self.joyceActive = self.joyce.get_instance_id()
+            return joy
+        else:
+            self.joyceActive = -1
 
+    # connects to the controller with the following name
+    def connectToController(self, conName:str):
+        self.pg.joystick.init()
+        joysticks = [self.pg.joystick.Joystick(x) for x in range(self.pg.joystick.get_count())]
+        for joy in joysticks:
+            if joy.get_name() == conName:
+                self.joyce = joy
+                print("controller conected!", joy.get_name())
+                self.joyceActive = self.joyce.get_instance_id()
+                return joy
+        print("Failed to connect to controller named:\"",conName,"\"")
+        self.joyceActive = -1
+        return None
+
+    # disconects controller
+    def disconnectController(self):
+        self.joyceActive = -1
+    
     # creates and activates the virtual xbox controller that we can screw with
     def createVirtualController(self):
         gamepad = vg.VX360Gamepad() 
@@ -327,40 +357,50 @@ class HybridController:
         gamepad.update()
         gamepad.release_button(vg.XUSB_BUTTON.XUSB_GAMEPAD_A)
         gamepad.update
+        self.virtActive = True
         return gamepad
+
+    # removes the virtual controller
+    def removeVirtualController(self):
+        del self.virtcon
+        self.virtActive = False
 
     # The main update function
     def updatefull(self, joy:pygame.joystick.Joystick, gamepad:vg.VX360Gamepad, scheme:dict[str, dict[str, int]], map:dict[str, any], modes:list[str]):
         self.virtcon = gamepad
+        self.joyce = joy
         self.activeMode = modes
-        changed = False
-        # cycle through the events and perform action if need be
-        for event in self.pg.event.get((pygame.JOYAXISMOTION, pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP, pygame.JOYHATMOTION, pygame.JOYDEVICEREMOVED)):
-            if (event.type == pygame.JOYBUTTONDOWN) | (event.type == pygame.JOYBUTTONUP):
-                button = self.buttonName(event.button, scheme)
-                self.readButton(button, joy, scheme["button"], map)
-                changed = True
-            elif event.type == pygame.JOYAXISMOTION:
-                axis = self.axisName(event.axis, scheme)
-                self.readAxis(axis, joy, scheme["axis"], map)
-                changed = True
-            elif event.type == pygame.JOYHATMOTION:
-                hat = event.hat
-                self.readHat(hat, joy, scheme, map)
-                changed = True
-            elif event.type == pygame.JOYDEVICEREMOVED :
-                print("controller disconnected")
-        while len(self.buttonSet) > 0:
-            button = self.buttonSet.pop()
-            if self.INPUTOPTIONS.__contains__(button):
-                self.updateButton(button, gamepad, modes[0])
-        while len(self.axisSet) > 0:
-            axis = self.axisSet.pop()
-            if self.INPUTOPTIONS.__contains__(axis) :
-                self.updateAxis(axis, gamepad, modes[1])
-        if changed:
-            self.updateController(self.virtcon, self.activeMode[0], self.activeMode[1])
-            
+        if self.joyceActive != -1:
+            # cycle through the events and perform action if need be
+            changed = False
+            for event in self.pg.event.get((pygame.JOYAXISMOTION, pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP, pygame.JOYHATMOTION, pygame.JOYDEVICEREMOVED)):
+                if (event.type == pygame.JOYBUTTONDOWN) | (event.type == pygame.JOYBUTTONUP):
+                    button = self.buttonName(event.button, scheme)
+                    self.readButton(button, joy, scheme["button"], map)
+                    changed = True
+                elif event.type == pygame.JOYAXISMOTION:
+                    axis = self.axisName(event.axis, scheme)
+                    self.readAxis(axis, joy, scheme["axis"], map)
+                    changed = True
+                elif event.type == pygame.JOYHATMOTION:
+                    hat = event.hat
+                    self.readHat(hat, joy, scheme, map)
+                    changed = True
+                elif event.type == pygame.JOYDEVICEREMOVED :
+                    print("controller disconnected", event)
+                    if event.instance_id == self.joyceActive:
+                        self.joyceActive = -1
+            if changed:
+                self.updateController(self.virtcon, self.activeMode[0], self.activeMode[1])          
+        if self.virtActive:
+            while len(self.buttonSet) > 0:
+                button = self.buttonSet.pop()
+                if self.INPUTOPTIONS.__contains__(button):
+                    self.updateButton(button, gamepad, modes[0])
+            while len(self.axisSet) > 0:
+                axis = self.axisSet.pop()
+                if self.INPUTOPTIONS.__contains__(axis) :
+                    self.updateAxis(axis, gamepad, modes[1])
     def updatepart(self, scheme:dict[str, dict[str, int]], map:dict[str, any], modes:list[str]):
         self.updatefull(self.joyce, self.virtcon, scheme, map, modes)
     def update(self):
@@ -386,13 +426,20 @@ class HybridController:
 
     # sets the joystick
     def setJoystick(self, newJoy:pygame.joystick.Joystick):
-        self.joyce = newJoy
+        if newJoy != None:
+            self.joyce = newJoy
+            self.joyceActive = newJoy.get_instance_id()
+            self.readController(self.joyce, self.activeScheme, self.activeMap)
+        else:
+            self.joyceActive = -1
 
     # sets the virtual controller
     def setVirtualControler(self, newVirt:vg.VX360Gamepad):
-        self.virtcon = newVirt
-
-
+        if newVirt != None:
+            self.virtcon = newVirt
+            self.virtActive = True
+        else:
+            self.virtActive = False
 
     ################### helpers ######################
     # converts button input to axis input
@@ -453,6 +500,13 @@ class HybridController:
             return buttons[ind]
         else:
             return 0x0
+
+    def buttonFromHex(self, hexcode):
+        buttons = {self.XBOX_A:'a', self.XBOX_B:'b', self.XBOX_X:'x', self.XBOX_Y:'y', self.XBOX_BACK:'back', self.XBOX_GUIDE:'guide', self.XBOX_START:'start', self.XBOX_LEFT_THUMB:'left thumb', self.XBOX_RIGHT_THUMB:'right thumb', self.XBOX_LEFT_SHOULDER:'left shoulder', self.XBOX_RIGHT_SHOULDER:'right shoulder', self.XBOX_DPAD_UP:'dpad up', self.XBOX_DPAD_DOWN:'dpad down', self.XBOX_DPAD_LEFT:'dpad left', self.XBOX_DPAD_RIGHT:'dpad right'}
+        if buttons.__contains__(hexcode):
+            return buttons[hexcode]
+        else:
+            return ""
 
     # returns the button string name by index
     def strFromButtonIndex(self, ind: int):
@@ -537,6 +591,8 @@ class HybridController:
             return code
         elif mode == "avg":
             return (code + joy) / 2
+        elif mode == "sum":
+            return self.clampf(code+joy)
 
 ##################################################
 ##################### main #######################
@@ -545,6 +601,7 @@ cmap = [PS4SCHEME, PS4DEMOMAP]
 if __name__ == '__main__':
     cntr = HybridController(cmap[0], cmap[1]) 
     cntr.setModes(["xor","max"])
+    
     # this is a simple loop, and can be replaced by calling update() if this code is called from another file
     coderunning = True
     while coderunning:
@@ -553,4 +610,12 @@ if __name__ == '__main__':
         # updates the system
         #cntr.updatefull(joy=cntr.joyce, gamepad=cntr.virtcon, scheme=PS4SCHEME, map=PS4DEFAULTMAP, modes=["joy","joy"]) 
         cntr.update()
+        while ~((cntr.joyceActive != -1) & cntr.virtActive):
+            if cntr.joyceActive==-1:
+                cntr.connectController()
+            if ~cntr.virtActive:
+                cntr.createVirtualController()
+            sleep(10)
+        #print()
+        #cntr.printController(cntr.con)
         
