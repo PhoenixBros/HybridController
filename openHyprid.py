@@ -1,6 +1,7 @@
 # this is a demonstration of how to use the code
 import ControllerCodeHybridizer
 import time
+import vgamepad
 
 # lists all avalable input names
 inputOptions = ['a', 'b', 'x', 'y', 'back', 'guide', 'start', 'left thumb', 'right thumb', 'left shoulder', 'right shoulder', 'dpad up', 'dpad down', 'dpad left', 'dpad right', 'left stick x', 'left stick y', 'right stick x', 'right stick y', 'left trigger','right trigger']
@@ -35,28 +36,41 @@ PS4DEFAULTMAP = {   'x':[{'key':'a','type':'button'}],
                     'right trigger':[{'key':'right trigger','type':'axis', 'squash':True}]}
 
 # creating new modes of combination can give you more control over how the code interacts with the natural inputs for example: making specific buttons only work for the controller or the code
-modes = ['and','max']
+modes = ['and','sum']
 
 # in its initialization it needs to know the scheme and mapping
 con = ControllerCodeHybridizer.HybridController(PS4SCHEME, PS4DEFAULTMAP)
 # if you dont set a mode it defualts to ["joy", "joy"]
 con.setModes(modes)
 
+control = con.virtcon
+control.press_button(vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_A)
+control.release_button(vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_A)
+c = vgamepad.VX360Gamepad()
+c.press_button(vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_A)
+c.release_button(vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_A)
+c1 = vgamepad.VX360Gamepad()
+c1.press_button(vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_A)
+c1.release_button(vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_A)
+c2 = vgamepad.VX360Gamepad()
+c2.press_button(vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_A)
+c2.release_button(vgamepad.XUSB_BUTTON.XUSB_GAMEPAD_A)
+con.connectToController("PS4 controller")
+
 # simple loop
 tick = 0
 while True:
+    # sets the code side of the controller to a random state 
+    con.randomize()
     # avoids calling 3 problamatic buttons
-    if not (inputOptions[tick%15] in ['back','guide','start']):
-        # sets a button to true
-        con.setButton(tick%15, True)
-    # sets a button to false
-    con.setButton((tick+8)%15, False)
-    # sets an axis to some float (in this case -1,0,1)
-    con.setAxis((tick%17)%6, (tick%5)%3-1)
+    con.setButtonInt(4, False) #back
+    con.setButtonInt(5, False) #guide
+    con.setButtonInt(6, False) #start
 
     # actually updates the values of the virtual controler based on if the input has changed
     con.update()
 
     # loops at a framerate
     time.sleep(1/60)
+    tick+=1
     tick+=1
